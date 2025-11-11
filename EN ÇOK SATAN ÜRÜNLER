@@ -1,0 +1,27 @@
+--COPY OF ORDER_ITEMS_DATASET
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` AS
+SELECT * FROM  `elegant-hope-474619-r6.Olist.olist_order_items_dataset`;
+
+--FIND DUPLICATE  ORDER_IDs , PRODUCT_IDs
+SELECT order_id, product_id, COUNT(*)
+FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` 
+GROUP BY order_id, product_id HAVING COUNT(*) > 1;
+
+--DELETE DUPLICATE ORDER_IDs , PRODUCT_IDs
+DELETE FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned`
+WHERE (order_id, product_id) IN (
+  SELECT AS STRUCT order_id, product_id
+  FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned`
+  GROUP BY order_id, product_id
+  HAVING COUNT(*) > 1
+
+--EN ÇOK SATAN ÜRÜNLER
+--Amaç: En çok sipariş edilen ürünleri bulmak ve Ürün bazında satış hacmini ve gelirini görmek.
+SELECT 
+  oi.product_id,
+  COUNT(oi.order_id) AS total_sales,
+  ROUND(SUM(oi.price), 2) AS total_revenue
+FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` AS oi
+GROUP BY oi.product_id
+ORDER BY total_sales DESC
+LIMIT 10;
