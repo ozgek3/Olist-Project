@@ -1,0 +1,13 @@
+SELECT 
+  p.product_category_name AS category,
+  ROUND(AVG(DATE_DIFF(o.order_delivered_customer_date, o.order_purchase_timestamp, DAY)), 2) AS avg_delivery_days,
+  COUNT(DISTINCT o.order_id) AS total_orders
+FROM `elegant-hope-474619-r6.Olist.olist_orders_dataset_cleaned`  o
+JOIN `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` oi
+  ON o.order_id = oi.order_id
+JOIN `elegant-hope-474619-r6.Olist.olist_products_dataset_cleaned` p
+  ON oi.product_id = p.product_id
+WHERE o.order_delivered_customer_date IS NOT NULL
+GROUP BY category
+HAVING total_orders > 50
+ORDER BY avg_delivery_days ASC;
