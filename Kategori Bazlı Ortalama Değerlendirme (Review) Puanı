@@ -1,0 +1,54 @@
+--**COPY OF PRODUCTS_DATASET
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_products_dataset_cleaned` AS
+SELECT * FROM `elegant-hope-474619-r6.Olist.olist_products_dataset`;
+
+--**COPY OF ORDER_ITEM_DATASET
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` AS
+SELECT * FROM  `elegant-hope-474619-r6.Olist.olist_order_items_dataset`;
+
+--**COPY OF ORDER_ITEM_DATASET
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` AS
+SELECT * FROM  `elegant-hope-474619-r6.Olist.olist_order_items_dataset`;
+
+--**COPY OF ORDERS_REVİWERS_DATASET
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_order_reviews_dataset_cleaned` AS
+SELECT * FROM `elegant-hope-474619-r6.Olist.olist_order_reviews_dataset`;
+
+--**COPY OF PRODUCT_CATEGORY_NAME_TRANSLATION
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_product_category_name_translation_cleaned` AS
+SELECT * FROM `elegant-hope-474619-r6.Olist.olist_product_category_name_translation`;
+
+--CLEANED DUCLICATE ORDER_IDs ON REVİEWS_DATASET
+SELECT order_id, COUNT(*) AS review_count
+FROM  `elegant-hope-474619-r6.Olist.olist_order_reviews_dataset_cleaned`
+GROUP BY order_id
+HAVING review_count > 1;
+
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_order_reviews_dataset_cleaned` AS
+SELECT * EXCEPT(rn)
+FROM (
+  SELECT *,
+         ROW_NUMBER() OVER(PARTITION BY order_id ORDER BY review_creation_date DESC) AS rn
+  FROM `elegant-hope-474619-r6.Olist.olist_order_reviews_dataset_cleaned`
+)
+WHERE rn = 1;
+
+--Kategori Bazlı Ortalama Değerlendirme (Review) Puanı
+
+SELECT 
+  t.product_category_name_english AS category_name,
+  ROUND(AVG(r.review_score), 2) AS avg_review_score,
+  COUNT(r.review_id) AS total_reviews
+FROM `elegant-hope-474619-r6.Olist.olist_order_reviews_dataset_cleaned` AS r
+JOIN `elegant-hope-474619-r6.Olist.olist_orders_dataset_cleaned` AS o
+  ON r.order_id = o.order_id
+JOIN `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` AS oi
+  ON o.order_id = oi.order_id
+JOIN `elegant-hope-474619-r6.Olist.olist_products_dataset_cleaned` AS p
+  ON oi.product_id = p.product_id
+JOIN `elegant-hope-474619-r6.Olist.olist_product_category_name_translation_cleaned` AS t
+  ON p.product_category_name = t.product_category_name
+GROUP BY category_name
+HAVING total_reviews > 50
+ORDER BY avg_review_score DESC
+LIMIT 10;
