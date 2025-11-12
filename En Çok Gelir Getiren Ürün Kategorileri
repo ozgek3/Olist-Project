@@ -1,0 +1,47 @@
+--**COPY OF ORDER_ITEM_DATASET TABLE TO WORK ON IT
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` AS
+SELECT * FROM  `elegant-hope-474619-r6.Olist.olist_order_items_dataset`;
+
+--**COPY OF PRODUCT_CATEGORY_NAME_TRANSLATION TABLE TO WORK ON IT
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_product_category_name_translation_cleaned` AS
+SELECT * FROM `elegant-hope-474619-r6.Olist.olist_product_category_name_translation`;
+
+--**COPY OF PRODUCTS_DATASET TABLE TO WORK ON IT
+CREATE OR REPLACE TABLE `elegant-hope-474619-r6.Olist.olist_products_dataset_cleaned` AS
+SELECT * FROM `elegant-hope-474619-r6.Olist.olist_products_dataset`;
+
+--CONVERT NULLS TO UNKNOWN ON PRODUCTS_DATASET
+SELECT * FROM  `elegant-hope-474619-r6.Olist.olist_products_dataset_cleaned` 
+WHERE product_category_name IS NULL;
+
+UPDATE `elegant-hope-474619-r6.Olist.olist_products_dataset_cleaned` 
+SET product_category_name = 'unknown'
+WHERE product_category_name IS NULL;
+
+--DELETE DUPLICATE ORDER_ID AND PRODUCT_ID ON ITEMS_DATASET
+SELECT order_id, product_id, COUNT(*)
+ FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` 
+ GROUP BY order_id, product_id HAVING COUNT(*) > 1
+
+DELETE FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned`
+WHERE (order_id, product_id) IN (
+  SELECT AS STRUCT order_id, product_id
+  FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned`
+  GROUP BY order_id, product_id
+  HAVING COUNT(*) > 1
+);
+
+--EN ÇOK GELİR GETİREN ÜRÜN KATEGORİLERİ
+----Amaç: Hangi ürün kategorilerinin Olist’e en çok gelir sağladığını görmek.“en kârlı” alanları belirlemek
+SELECT 
+  t.product_category_name_english AS category_name,
+  ROUND(SUM(oi.price), 2) AS total_revenue,
+  COUNT(DISTINCT oi.product_id) AS total_products_sold
+FROM `elegant-hope-474619-r6.Olist.olist_order_items_dataset_cleaned` AS oi
+JOIN  `elegant-hope-474619-r6.Olist.olist_products_dataset_cleaned` AS p
+  ON oi.product_id = p.product_id
+JOIN `elegant-hope-474619-r6.Olist.olist_product_category_name_translation_cleaned` AS t
+  ON p.product_category_name = t.product_category_name
+GROUP BY category_name
+ORDER BY total_revenue DESC
+LIMIT 10;
